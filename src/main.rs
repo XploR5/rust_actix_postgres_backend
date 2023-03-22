@@ -141,25 +141,50 @@ mod handlers {
     }
 
 
+    // pub async fn add_plant_data(
+    //     db_pool: web::Data<Pool>,
+    // ) -> Result<HttpResponse, Error> {
+    //     let plant_data = PlantData {
+    //         plant_id: rand::thread_rng().gen_range(1 .. 10),
+    //         created_at: rand::thread_rng().gen_range(1 .. 101),
+    //         updated_at: rand::thread_rng().gen_range(1 .. 101),
+    //         planned_data: rand::thread_rng().gen_range(1 .. 101),
+    //         unplanned_data: rand::thread_rng().gen_range(1 .. 101),
+    //     };    
+    //     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;    
+    //     db::add_plant_data(web::Data::new(client),  actix_web::web::Json(plant_data)).await;   
+    //     Ok(HttpResponse::Ok().json({}))
+    // }
+    
+
     pub async fn add_plant_data(
         db_pool: web::Data<Pool>,
     ) -> Result<HttpResponse, Error> {
-        let plant_data = PlantData {
-            plant_id: rand::thread_rng().gen_range(1 .. 10),
-            created_at: rand::thread_rng().gen_range(1 .. 101),
-            updated_at: rand::thread_rng().gen_range(1 .. 101),
-            planned_data: rand::thread_rng().gen_range(1 .. 101),
-            unplanned_data: rand::thread_rng().gen_range(1 .. 101),
-        };
+        let handles = (0..100)
+            .map(|_| {
+                let db_pool = db_pool.clone();
+                tokio::spawn(async move {
+                    let plant_data = PlantData {
+                        plant_id: rand::thread_rng().gen_range(1 .. 10),
+                        created_at: rand::thread_rng().gen_range(1 .. 101),
+                        updated_at: rand::thread_rng().gen_range(1 .. 101),
+                        planned_data: rand::thread_rng().gen_range(1 .. 101),
+                        unplanned_data: rand::thread_rng().gen_range(1 .. 101),
+                    };
+                    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+                    db::add_plant_data(web::Data::new(client), actix_web::web::Json(plant_data)).await;
+                    Ok::<_, MyError>(())
+                })
+            })
+            .collect::<Vec<_>>();
     
-        let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    
-        db::add_plant_data(web::Data::new(client),  actix_web::web::Json(plant_data)).await;
+        // Wait for all the threads to complete
+        for handle in handles {
+            handle.await;
+        }
     
         Ok(HttpResponse::Ok().json({}))
     }
-    
-
 
 }
 
