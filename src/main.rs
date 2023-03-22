@@ -25,8 +25,8 @@ mod models {
     #[pg_mapper(table = "plantdata")]
     pub struct PlantData {
     pub plant_id: i32,
-    pub created_at: i32,
-    pub updated_at: i32,
+    pub created_at: String,
+    pub updated_at: String,
     pub planned_data: i32,
     pub unplanned_data: i32,
     }
@@ -124,6 +124,7 @@ mod handlers {
     use actix_web::{web, Error, HttpResponse};
     use deadpool_postgres::{Client, Pool};
     use rand::Rng;
+    use chrono::Utc;
 
     use crate::{db, errors::MyError, models::{User, PlantData}};
 
@@ -140,34 +141,17 @@ mod handlers {
         Ok(HttpResponse::Ok().json(new_user))
     }
 
-
-    // pub async fn add_plant_data(
-    //     db_pool: web::Data<Pool>,
-    // ) -> Result<HttpResponse, Error> {
-    //     let plant_data = PlantData {
-    //         plant_id: rand::thread_rng().gen_range(1 .. 10),
-    //         created_at: rand::thread_rng().gen_range(1 .. 101),
-    //         updated_at: rand::thread_rng().gen_range(1 .. 101),
-    //         planned_data: rand::thread_rng().gen_range(1 .. 101),
-    //         unplanned_data: rand::thread_rng().gen_range(1 .. 101),
-    //     };    
-    //     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;    
-    //     db::add_plant_data(web::Data::new(client),  actix_web::web::Json(plant_data)).await;   
-    //     Ok(HttpResponse::Ok().json({}))
-    // }
-    
-
     pub async fn add_plant_data(
         db_pool: web::Data<Pool>,
     ) -> Result<HttpResponse, Error> {
         let handles = (0..100)
             .map(|_| {
                 let db_pool = db_pool.clone();
-                tokio::spawn(async move {
+                tokio::spawn(async move {                    
                     let plant_data = PlantData {
                         plant_id: rand::thread_rng().gen_range(1 .. 10),
-                        created_at: rand::thread_rng().gen_range(1 .. 101),
-                        updated_at: rand::thread_rng().gen_range(1 .. 101),
+                        created_at: Utc::now().to_rfc3339(),
+                        updated_at: Utc::now().to_rfc3339(),
                         planned_data: rand::thread_rng().gen_range(1 .. 101),
                         unplanned_data: rand::thread_rng().gen_range(1 .. 101),
                     };

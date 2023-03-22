@@ -13,8 +13,8 @@ CREATE TABLE testing.users (
 CREATE TABLE testing.plantdata (
     id              BIGSERIAL PRIMARY KEY,
     plant_id        INTEGER NOT NULL,
-    created_at      INTEGER NOT NULL,
-    updated_at      INTEGER NOT NULL,
+    created_at      VARCHAR(50) NOT NULL,
+    updated_at      VARCHAR(50) NOT NULL,
     planned_data    INTEGER NOT NULL,
     unplanned_data  INTEGER NOT NULL
 );
