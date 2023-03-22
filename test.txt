@@ -42,3 +42,22 @@ pub async fn add_plant_data(
     //     db::add_plant_data(web::Data::new(client),  actix_web::web::Json(plant_data)).await;   
     //     Ok(HttpResponse::Ok().json({}))
     // }
+
+// prompt
+
+     pub async fn get_plant_data(db_pool: web::Data<Pool>) -> Result<HttpResponse, Error> {
+        let client = db_pool.get().await.map_err(MyError::PoolError)?;
+        let stmt = client
+            .prepare("SELECT * FROM testing.plantdata ORDER BY created_at DESC;")
+            .await
+            .unwrap();
+        let plant_data = client
+            .query(&stmt, &[])
+            .await
+            .expect("Error retrieving plant data")
+            .iter()
+            .map(|row| PlantData::from_row_ref(row).unwrap())
+            .collect::<Vec<PlantData>>();
+    
+        Ok(HttpResponse::Ok().json(plant_data))
+    }

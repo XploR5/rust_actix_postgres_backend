@@ -125,6 +125,7 @@ mod handlers {
     use deadpool_postgres::{Client, Pool};
     use rand::Rng;
     use chrono::Utc;
+    use tokio_pg_mapper::FromTokioPostgresRow;
 
     use crate::{db, errors::MyError, models::{User, PlantData}};
 
@@ -170,15 +171,33 @@ mod handlers {
         Ok(HttpResponse::Ok().json({}))
     }
 
+
+    pub async fn get_plant_data(db_pool: web::Data<Pool>) -> Result<HttpResponse, Error> {
+        let client = db_pool.get().await.map_err(MyError::PoolError)?;
+        let stmt = client
+            .prepare("SELECT * FROM testing.plantdata ORDER BY created_at DESC;")
+            .await
+            .unwrap();
+        let plant_data = client
+            .query(&stmt, &[])
+            .await
+            .expect("Error retrieving plant data")
+            .iter()
+            .map(|row| PlantData::from_row_ref(row).unwrap())
+            .collect::<Vec<PlantData>>();
+    
+        Ok(HttpResponse::Ok().json(plant_data))
+    }
+
+
 }
 
 use ::config::Config;
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
-use handlers::add_user;
+use handlers::{add_user, get_plant_data, add_plant_data};
 use tokio_postgres::NoTls;
-
-use crate::{config::ExampleConfig, handlers::add_plant_data};
+use crate::{config::ExampleConfig};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -198,7 +217,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .service(web::resource("/users").route(web::post().to(add_user)))
             .service(web::resource("/plantdata").route(web::post().to(add_plant_data)))
-            
+            .service(web::resource("/getplantdata").route(web::get().to(get_plant_data)))
+
     })
     .bind(config.server_addr.clone())?
     .run();
